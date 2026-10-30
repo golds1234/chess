@@ -3,8 +3,6 @@ name: Build Morphe Patches
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -12,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write  # Diubah ke write agar dapat melakukan commit kembali ke repo
       packages: read
 
     steps:
@@ -30,6 +28,19 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x gradlew
+
+      - name: Generate Patches List
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew generatePatchesList
+
+      - name: Commit updated patches-list.json if changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add patches-list.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-generate patches-list.json [skip ci]" && git push)
 
       - name: Build Android Bundle
         env:
